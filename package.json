@@ -1,0 +1,11 @@
+{
+  "name": "w2g-together-extension",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Extension repo for the w2g-discord watch party Activity",
+  "scripts": {
+    "index": "node scripts/index.mjs",
+    "test": "node --test test/"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "name": "Watch Party Examples",
+  "description": "Video sources for the Watch Party Discord Activity.",
+  "extensions": [
+    {
+      "id": "archive-org",
+      "name": "Internet Archive",
+      "version": "1.0.0",
+      "lang": "en",
+      "description": "Public-domain feature films, silent films, and classic TV from archive.org.",
+      "file": "extensions/archive-org.js",
+      "hosts": [
+        "archive.org"
+      ],
+      "nsfw": false,
+      "sha256": "3ed561c5c4189bbf9ecf639c858fce32809cd1909b482600455deeaeb90ba332"
+    },
+    {
+      "id": "kisskh",
+      "name": "KissKH",
+      "version": "1.0.0",
+      "lang": "en",
+      "description": "Asian dramas and movies from kisskh.ovh, with subtitles.",
+      "file": "extensions/kisskh.js",
+      "hosts": [
+        "kisskh.ovh"
+      ],
+      "nsfw": false,
+      "sha256": "fa1dc952fdb1a1702e43b99df13affa7f95c0ed662f08968fc5e08b732d85cd0"
+    }
+  ]
+}
