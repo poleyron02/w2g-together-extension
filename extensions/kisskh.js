@@ -31,7 +31,15 @@ const SUBTITLE_CIPHERS = {
   other: { algorithm: 'aes-cbc', key: 'sWODXX04QRTkHdlZ', iv: '8pwhapJeC4hrS9hO' },
 }
 
-const HEADERS = { referer: `${BASE}/`, accept: 'application/json, text/plain, */*' }
+// Requests are relayed from the app's server. Cloudflare in front of the site
+// rejects cloud IPs that present Node's default user agent.
+const HEADERS = {
+  referer: `${BASE}/`,
+  accept: 'application/json, text/plain, */*',
+  'accept-language': 'en-US,en;q=0.9',
+  'user-agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+}
 
 function hexBytes(hex) {
   const out = new Uint8Array(hex.length / 2)
@@ -73,8 +81,15 @@ async function kkey(episodeId, guid) {
 
 async function getJson(path) {
   const res = await http.get(`${API}/${path}`, { headers: HEADERS })
-  if (!res.ok) throw new Error(`KissKH request failed (${res.status})`)
-  return res.json()
+  if (res.ok) return res.json()
+  const body = res.text()
+  if (/cloudflare|cf-ray|just a moment|attention required/i.test(body)) {
+    throw new Error(`kisskh.ovh's Cloudflare blocked the app server (${res.status})`)
+  }
+  if (res.status === 403 && /\/(Episode|Sub)\//.test(path)) {
+    throw new Error('KissKH rejected the request signature (403); the extension needs updated site constants')
+  }
+  throw new Error(`KissKH request failed (${res.status})`)
 }
 
 function toItem(entry) {
