@@ -16,8 +16,11 @@ async function load(file, routes) {
     get: async (url) => {
       requested.push(url)
       const match = Object.entries(routes).find(([needle]) => url.includes(needle))
-      const body = match ? JSON.stringify(match[1]) : ''
-      return { ok: Boolean(match), status: match ? 200 : 404, url, body, text: () => body, json: () => JSON.parse(body) }
+      // A route value of { status, raw } returns that status and raw body text.
+      const custom = match && match[1] && typeof match[1].raw === 'string' ? match[1] : null
+      const status = custom ? custom.status : match ? 200 : 404
+      const body = custom ? custom.raw : match ? JSON.stringify(match[1]) : ''
+      return { ok: status >= 200 && status < 300, status, url, body, text: () => body, json: () => JSON.parse(body) }
     },
   }
   let ext = null
@@ -112,4 +115,31 @@ test('kisskh: popular → search → episodes → signed streams', async () => {
   const episodeUrl = requested.find((u) => u.includes('/Episode/'))
   assert.match(episodeUrl, /kkey=238D760DB6FD3C5F0ECD7CF0C120882D8A80A89E/)
   assert.ok(requested.every((u) => new URL(u).hostname === 'kisskh.ovh'))
+})
+
+test('kisskh: falls back to a mirror when Cloudflare blocks one, and remembers it', async () => {
+  const blocked = { status: 403, raw: '<title>Attention Required! | Cloudflare</title>' }
+  const { ext, requested } = await load('extensions/kisskh.js', {
+    'kisskh.ovh/': blocked,
+    'kisskh.id/api/DramaList/List': { page: 1, totalCount: 1, data: [{ id: 1, title: 'A', episodesCount: 2 }] },
+    'kisskh.id/api/DramaList/Search': [],
+  })
+
+  const page = await ext.popular(1)
+  assert.equal(page.items[0].id, '1')
+  assert.deepEqual(requested.map((u) => new URL(u).hostname), ['kisskh.ovh', 'kisskh.id'])
+
+  await ext.search('x', 1)
+  assert.equal(new URL(requested.at(-1)).hostname, 'kisskh.id')
+  assert.equal(requested.length, 3)
+})
+
+test('kisskh: reports every mirror when all are blocked', async () => {
+  const blocked = { status: 403, raw: 'cloudflare' }
+  const { ext } = await load('extensions/kisskh.js', {
+    'kisskh.ovh/': blocked,
+    'kisskh.id/': blocked,
+    'kisskh.la/': blocked,
+  })
+  await assert.rejects(ext.popular(1), /Every KissKH mirror blocked.*kisskh\.ovh.*kisskh\.id.*kisskh\.la/)
 })

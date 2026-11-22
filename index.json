@@ -19,15 +19,17 @@
     {
       "id": "kisskh",
       "name": "KissKH",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "lang": "en",
-      "description": "Asian dramas and movies from kisskh.ovh, with subtitles.",
+      "description": "Asian dramas and movies from KissKH (kisskh.ovh, with mirror fallback), with subtitles.",
       "file": "extensions/kisskh.js",
       "hosts": [
-        "kisskh.ovh"
+        "kisskh.ovh",
+        "kisskh.id",
+        "kisskh.la"
       ],
       "nsfw": false,
-      "sha256": "c59c681f9eae561279f696ed86cffdfced2d3e95b687a9dcf0d52313091fa11a"
+      "sha256": "cc96137c98a5bae63f3969bc39fb4f75142c48b94ad5ed4d6cf0d307b06cb93d"
     }
   ]
 }

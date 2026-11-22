@@ -19,7 +19,7 @@ Repos and installed extensions are shared by everyone in the same Discord server
 | `archive-org` | Internet Archive | Public-domain feature films, silent films, classic TV |
 | `kisskh` | kisskh.ovh | Asian dramas and movies with encrypted subtitles (needs an app build with subtitle `cipher` support) |
 
-`kisskh` signs its API calls with values from the site's web build (`APP` at the top of `extensions/kisskh.js`). If episodes start failing with 403, refresh those from the site's JS bundle and bump the version.
+`kisskh` tries `kisskh.ovh`, then the `kisskh.id` and `kisskh.la` mirrors (same backend), skipping any domain whose Cloudflare blocks the app server and remembering the one that worked. It signs its API calls with values from the site's web build (`APP` at the top of `extensions/kisskh.js`). If episodes start failing with 403, refresh those from the site's JS bundle and bump the version.
 
 ## Repo layout
 

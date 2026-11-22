@@ -1,4 +1,4 @@
-// KissKH — Asian dramas and movies (kisskh.ovh).
+// KissKH — Asian dramas and movies (kisskh.ovh and its mirrors).
 // Runs inside the Watch Party extension sandbox: `http`, `log`, and
 // `registerExtension` are provided; fetch/XHR are not available.
 //
@@ -7,9 +7,11 @@
 // build constants below. When the site ships a new build, refresh these from
 // its JS bundle (search for `appVer`, `viGuid`, `subGuid`, `platformVer`).
 
-const BASE = 'https://kisskh.ovh'
-const API = `${BASE}/api`
+// Mirrors of the same backend (same ids and kkey). Each domain has its own
+// Cloudflare settings, so one may accept the app server when another blocks it.
+const MIRRORS = ['https://kisskh.ovh', 'https://kisskh.id', 'https://kisskh.la']
 const PAGE_SIZE = 40
+let preferredMirror = 0
 
 const APP = {
   name: 'kisskh',
@@ -33,8 +35,7 @@ const SUBTITLE_CIPHERS = {
 
 // Requests are relayed from the app's server. Cloudflare in front of the site
 // rejects cloud IPs that present Node's default user agent.
-const HEADERS = {
-  referer: `${BASE}/`,
+const BASE_HEADERS = {
   accept: 'application/json, text/plain, */*',
   'accept-language': 'en-US,en;q=0.9',
   'user-agent':
@@ -79,17 +80,38 @@ async function kkey(episodeId, guid) {
   return Array.from(new Uint8Array(cipher), (b) => b.toString(16).padStart(2, '0')).join('').toUpperCase()
 }
 
+function isCloudflareBlock(res) {
+  return /cloudflare|cf-ray|just a moment|attention required/i.test(res.text())
+}
+
+/** Try the last working mirror first, then the rest; a mirror is skipped when Cloudflare blocks it. */
 async function getJson(path) {
-  const res = await http.get(`${API}/${path}`, { headers: HEADERS })
-  if (res.ok) return res.json()
-  const body = res.text()
-  if (/cloudflare|cf-ray|just a moment|attention required/i.test(body)) {
-    throw new Error(`kisskh.ovh's Cloudflare blocked the app server (${res.status})`)
+  const order = MIRRORS.map((_, i) => (preferredMirror + i) % MIRRORS.length)
+  const failures = []
+  for (const index of order) {
+    const base = MIRRORS[index]
+    const host = new URL(base).hostname
+    let res
+    try {
+      res = await http.get(`${base}/api/${path}`, { headers: { ...BASE_HEADERS, referer: `${base}/` } })
+    } catch (err) {
+      failures.push(`${host}: ${err instanceof Error ? err.message : err}`)
+      continue
+    }
+    if (res.ok) {
+      preferredMirror = index
+      return res.json()
+    }
+    if (isCloudflareBlock(res)) {
+      failures.push(`${host}: Cloudflare ${res.status}`)
+      continue
+    }
+    if (res.status === 403 && /^(DramaList\/Episode|Sub)\//.test(path)) {
+      throw new Error('KissKH rejected the request signature (403); the extension needs updated site constants')
+    }
+    throw new Error(`KissKH request failed (${res.status})`)
   }
-  if (res.status === 403 && /\/(Episode|Sub)\//.test(path)) {
-    throw new Error('KissKH rejected the request signature (403); the extension needs updated site constants')
-  }
-  throw new Error(`KissKH request failed (${res.status})`)
+  throw new Error(`Every KissKH mirror blocked the app server (${failures.join('; ')})`)
 }
 
 function toItem(entry) {
